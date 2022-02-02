@@ -34,6 +34,9 @@ namespace ByteBank.View
 
         private void BtnProcessar_Click(object sender, RoutedEventArgs e)
         {
+            var taskSchedulerUI = TaskScheduler.FromCurrentSynchronizationContext();
+            BtnProcessar.IsEnabled = false;
+
             var contas = r_Repositorio.GetContaClientes();
 
             var resultado = new List<string>();
@@ -52,11 +55,19 @@ namespace ByteBank.View
                 });
             }).ToArray();
 
-            Task.WaitAll(contasTarefas); //Esse método aguarda que todas as tarefas dentro de contasTarefas sejam executadas
-
-            var fim = DateTime.Now;
-
-            AtualizarView(resultado, fim - inicio);
+            //Aqui, encadeamos várias tarefas para serem executadas em ordem, a primeira (do primeiro ContinueWith), é responsável por atualizar a view
+            //a segunda, é responsável por tornar o botão enabled de novo
+            //OBS: para criarmos tarefas que mexam na UI, é necessário utilizarmos o taskScheduler da linha de execução principal, por isso, declaramos ele na linha 37, e estamos passando ele como o segundo parâmetro dos nossos ContinueWith
+            Task.WhenAll(contasTarefas)
+                .ContinueWith(task =>
+                {
+                    var fim = DateTime.Now;
+                    AtualizarView(resultado, fim - inicio);
+                }, taskSchedulerUI)
+                .ContinueWith(task =>
+                {
+                    BtnProcessar.IsEnabled = true;
+                }, taskSchedulerUI);
         }
 
         private void AtualizarView(List<String> result, TimeSpan elapsedTime)
