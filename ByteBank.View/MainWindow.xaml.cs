@@ -36,17 +36,37 @@ namespace ByteBank.View
         {
             var contas = r_Repositorio.GetContaClientes();
 
+            var contas_parte1 = contas.Take(contas.Count() / 2);
+            var contas_parte2 = contas.Skip(contas.Count() / 2);
+
             var resultado = new List<string>();
 
             AtualizarView(new List<string>(), TimeSpan.Zero);
 
             var inicio = DateTime.Now;
 
-            foreach (var conta in contas)
+            //Aqui estamos declarando novas linhas de execução, mas ainda precisamos executá-las, isso é só uma declaração
+            Thread thread_parte1 = new Thread(() =>
             {
-                var resultadoConta = r_Servico.ConsolidarMovimentacao(conta);
-                resultado.Add(resultadoConta);
-            }
+                foreach (var conta in contas_parte1)
+                {
+                    var resultadoProcessamento = r_Servico.ConsolidarMovimentacao(conta);
+                    resultado.Add(resultadoProcessamento);
+                }
+            });
+
+            Thread thread_parte2 = new Thread(() =>
+            {
+                foreach (var conta in contas_parte2)
+                {
+                    var resultadoProcessamento = r_Servico.ConsolidarMovimentacao(conta);
+                    resultado.Add(resultadoProcessamento);
+                }
+            });
+
+            //Aqui estamos iniciando a execução das threads
+            thread_parte1.Start();
+            thread_parte2.Start();
 
             var fim = DateTime.Now;
 
