@@ -36,8 +36,13 @@ namespace ByteBank.View
         {
             var contas = r_Repositorio.GetContaClientes();
 
-            var contas_parte1 = contas.Take(contas.Count() / 2);
-            var contas_parte2 = contas.Skip(contas.Count() / 2);
+            var quantidadeContasPorThread = contas.Count() / 4;
+
+            //Aqui estou dividindo as minhas contas em 4 pedaços, e guardando cada pedaço em variáveis
+            var contas_parte1 = contas.Take(quantidadeContasPorThread);
+            var contas_parte2 = contas.Skip(quantidadeContasPorThread).Take(quantidadeContasPorThread);
+            var contas_parte3 = contas.Skip(quantidadeContasPorThread * 2).Take(quantidadeContasPorThread);
+            var contas_parte4 = contas.Skip(quantidadeContasPorThread * 3);
 
             var resultado = new List<string>();
 
@@ -54,10 +59,25 @@ namespace ByteBank.View
                     resultado.Add(resultadoProcessamento);
                 }
             });
-
             Thread thread_parte2 = new Thread(() =>
             {
                 foreach (var conta in contas_parte2)
+                {
+                    var resultadoProcessamento = r_Servico.ConsolidarMovimentacao(conta);
+                    resultado.Add(resultadoProcessamento);
+                }
+            });
+            Thread thread_parte3 = new Thread(() =>
+            {
+                foreach (var conta in contas_parte3)
+                {
+                    var resultadoProcessamento = r_Servico.ConsolidarMovimentacao(conta);
+                    resultado.Add(resultadoProcessamento);
+                }
+            });
+            Thread thread_parte4 = new Thread(() =>
+            {
+                foreach (var conta in contas_parte4)
                 {
                     var resultadoProcessamento = r_Servico.ConsolidarMovimentacao(conta);
                     resultado.Add(resultadoProcessamento);
@@ -67,6 +87,15 @@ namespace ByteBank.View
             //Aqui estamos iniciando a execução das threads
             thread_parte1.Start();
             thread_parte2.Start();
+            thread_parte3.Start();
+            thread_parte4.Start();
+
+            while (thread_parte1.IsAlive || thread_parte2.IsAlive
+                || thread_parte3.IsAlive || thread_parte4.IsAlive)
+            {
+                Thread.Sleep(250);
+                //Não vou fazer nada
+            }
 
             var fim = DateTime.Now;
 
